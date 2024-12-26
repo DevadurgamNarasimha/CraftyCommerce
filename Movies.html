@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debouncing and Throttling Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            min-height: 100px;
+        }
+        #click-counter {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debouncing and Throttling Demo</h1>
+                <input type="text" id="search" placeholder="Search for Movies or Cities...">
+        <div id="results"></div>
+                <button id="click-btn">Click Me!</button>
+        <div id="click-counter">Click Count: 0</div>
+    </div>
+    <script>
+       document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("search");
+    const resultsDiv = document.getElementById("results");
+    const clickButton = document.getElementById("click-btn");
+    const clickCounterDiv = document.getElementById("click-counter");
+    let clickCount = 0;
+    let debounceTimer;
+    let throttleTimer;
+    function debounce(func, delay) {
+        return function(...args) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+    function throttle(func, limit) {
+        return function(...args) {
+            if (!throttleTimer) {
+                func.apply(this, args);
+                throttleTimer = setTimeout(() => throttleTimer = null, limit);
+            }
+        };
+    }
+    async function fetchResults(query) {
+        if (!query) return;
+
+        let apiUrl = "";
+        const isMovieQuery = query.includes("movie");
+        if (isMovieQuery) {
+            apiUrl = `https://api.themoviedb.org/3/search/movie?api_key=YOUR_API_KEY&query=${query}`;
+        } else {
+            apiUrl = `https://api.teleport.org/api/cities/?search=${query}`;
+        }
+        try {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            if (isMovieQuery && data.results) {
+                displayMovies(data.results);
+            } else if (!isMovieQuery && data._embedded && data._embedded.city_search) {
+                displayCities(data._embedded.city_search);
+            } else {
+                resultsDiv.innerHTML = "No results found";
+            }
+        } catch (error) {
+            resultsDiv.innerHTML = "Error fetching results";
+        }
+    }
+    function displayMovies(movies) {
+        resultsDiv.innerHTML = movies.map(movie => `<p>${movie.title}</p>`).join("");
+    }
+    function displayCities(cities) {
+        resultsDiv.innerHTML = cities.map(city => `<p>${city.matching_full_name}</p>`).join("");
+    }
+    const debouncedSearch = debounce((event) => {
+        fetchResults(event.target.value);
+    }, 300);
+    searchInput.addEventListener("input", debouncedSearch);
+    const throttledClick = throttle(() => {
+        clickCount++;
+        clickCounterDiv.textContent = `Click Count: ${clickCount}`;
+    }, 2000);
+    clickButton.addEventListener("click", throttledClick);
+});
+    </script>
+</body>
+</html>
